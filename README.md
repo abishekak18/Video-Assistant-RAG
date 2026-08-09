@@ -154,18 +154,3 @@ Access the app at `http://localhost:8501`.
 2. Go to **[share.streamlit.io](https://share.streamlit.io/)** and create a new app.
 3. Add secrets (`MISTRAL_API_KEY`, `SARVAM_API_KEY`) under **App Settings -> Secrets**.
 4. Deploy with 1 click!
-
----
-
-## 📜 License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
-
----
-
-## 🙌 Acknowledgments
-- [LangChain Framework](https://www.langchain.com/)
-- [OpenAI Whisper](https://github.com/openai/whisper)
-- [Mistral AI](https://mistral.ai/)
-- [Streamlit](https://streamlit.io/)
-- [ChromaDB](https://www.trychroma.com/)
