@@ -1,4 +1,5 @@
 import os 
+import shutil
 from langchain_chroma import Chroma 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
@@ -19,8 +20,16 @@ def get_embeddings():
             model_kwargs = {"device" : 'cpu'}
         )
 
+
 def build_vector_store(transcript : str)->Chroma:
     print("Building vector Store")
+
+    # Clear previous vector database directory if it exists to avoid dimension mismatch
+    if os.path.exists(CHROMA_DIR):
+        try:
+            shutil.rmtree(CHROMA_DIR)
+        except Exception:
+            pass
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size = 500,
