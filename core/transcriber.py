@@ -1,7 +1,9 @@
-import whisper
 import os
 import requests
 from pydub import AudioSegment
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Sarvam's sync STT-translate API rejects audio longer than 30s.
 # We slice each chunk into 25s pieces (with a 5s safety margin) before sending.
@@ -18,21 +20,42 @@ SARVAM_MODEL = os.getenv("SARVAM_STT_MODEL", "saaras:v2.5")
 _model = None
 
 
-def load_model():
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
+
+def load_model():
     global _model  
 
     if _model is None: 
+        import whisper
         print(f"Loading Whisper model: {WHISPER_MODEL} ...")
         _model = whisper.load_model(WHISPER_MODEL) 
         print("Whisper model loaded.")
     return _model 
 
 
+def transcribe_chunk_groq(chunk_path: str) -> str:
+    """Fast Cloud STT using Groq Whisper API (whisper-large-v3-turbo)."""
+    from groq import Groq
+    client = Groq(api_key=GROQ_API_KEY)
+    
+    with open(chunk_path, "rb") as file:
+        transcription = client.audio.transcriptions.create(
+            file=(os.path.basename(chunk_path), file.read()),
+            model="whisper-large-v3-turbo",
+            response_format="text"
+        )
+    return str(transcription)
+
+
 def transcribe_chunk_whisper(chunk_path: str) -> str:
+    if GROQ_API_KEY:
+        try:
+            return transcribe_chunk_groq(chunk_path)
+        except Exception as e:
+            print(f"Groq API error ({e}), falling back to local Whisper...")
 
     model = load_model()  
-
     result = model.transcribe(chunk_path, task="transcribe")  
     return result["text"]  
 
