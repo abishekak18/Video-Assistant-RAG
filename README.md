@@ -1,3 +1,14 @@
+---
+title: AI Video Assistant
+emoji: 🎬
+colorFrom: purple
+colorTo: blue
+sdk: streamlit
+app_file: app.py
+pinned: false
+license: mit
+---
+
 # 🎬 AI Video Assistant — Meeting Intelligence & RAG System
 
 [![Streamlit App](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)](https://streamlit.io/)
