@@ -17,7 +17,7 @@ def download_youtube_audio(url: str) -> str:
         "nocheckcertificate": True,
         "extractor_args": {
             "youtube": {
-                "player_client": ["mweb", "android", "web"]
+                "player_client": ["android", "ios", "web"]
             }
         },
         "http_headers": {
@@ -35,12 +35,33 @@ def download_youtube_audio(url: str) -> str:
         },
         "quiet": True,
     }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=True)
-        raw_file = ydl.prepare_filename(info)
-        base, _ = os.path.splitext(raw_file)
-        filename = base + ".wav"
-    return filename
+
+    # Support cookies for cloud environments (Render/AWS) where YouTube blocks datacenter IPs
+    cookie_file = "cookies.txt"
+    if os.path.exists(cookie_file):
+        ydl_opts["cookiefile"] = cookie_file
+    elif os.getenv("YOUTUBE_COOKIES"):
+        cookie_path = os.path.join(DOWNLOAD_DIR, "render_cookies.txt")
+        with open(cookie_path, "w", encoding="utf-8") as f:
+            f.write(os.getenv("YOUTUBE_COOKIES"))
+        ydl_opts["cookiefile"] = cookie_path
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            raw_file = ydl.prepare_filename(info)
+            base, _ = os.path.splitext(raw_file)
+            filename = base + ".wav"
+        return filename
+    except Exception as e:
+        err_msg = str(e)
+        if "confirm you're not a bot" in err_msg or "Sign in" in err_msg:
+            raise RuntimeError(
+                "YouTube has blocked downloads from this cloud server IP ('Sign in to confirm you're not a bot'). "
+                "👉 Solution: Please use the '📁 Upload File' tab in the sidebar to upload the video/audio file directly, "
+                "or provide cookies.txt."
+            )
+        raise
 
 
 

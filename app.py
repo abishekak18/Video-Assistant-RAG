@@ -372,11 +372,28 @@ with st.sidebar:
     st.markdown("---")
 
     st.markdown("#### 📥 Input Source")
-    source = st.text_input(
-        "YouTube Link or File Path",
-        placeholder="https://youtube.com/watch?v=... or C:/path/file.mp4",
-        help="Paste a YouTube URL or path to a local audio/video file."
+    input_method = st.radio(
+        "Choose Input Format",
+        ["🔗 YouTube URL", "📁 Upload File"],
+        horizontal=True,
+        label_visibility="collapsed"
     )
+
+    source = ""
+    uploaded_file = None
+
+    if input_method == "🔗 YouTube URL":
+        source = st.text_input(
+            "YouTube Video Link",
+            placeholder="https://youtube.com/watch?v=...",
+            help="Paste a public YouTube video URL."
+        )
+    else:
+        uploaded_file = st.file_uploader(
+            "Upload Audio or Video",
+            type=["mp4", "mp3", "wav", "m4a", "webm", "mpeg"],
+            help="Upload an audio or video file directly from your computer."
+        )
 
     language = st.selectbox(
         "Speech Model Language",
@@ -414,8 +431,13 @@ st.markdown("""
 
 # ── Run Pipeline Handler ───────────────────────────────────────────────────────
 if run_btn:
-    if not source.strip():
-        st.warning("⚠️ Please provide a valid YouTube URL or file path in the sidebar.")
+    has_input = (input_method == "🔗 YouTube URL" and bool(source.strip())) or (input_method == "📁 Upload File" and uploaded_file is not None)
+
+    if not has_input:
+        if input_method == "🔗 YouTube URL":
+            st.warning("⚠️ Please provide a valid YouTube URL in the sidebar.")
+        else:
+            st.warning("⚠️ Please select an audio or video file to upload.")
     else:
         st.session_state.pipeline_done = False
         st.session_state.result = None
@@ -430,6 +452,15 @@ if run_btn:
         try:
             with status_box.container():
                 st.info("⚡ Pipeline actively processing... View live step progress in the sidebar.")
+
+            # Handle direct file upload
+            if input_method == "📁 Upload File" and uploaded_file is not None:
+                import os
+                os.makedirs("downloades", exist_ok=True)
+                target_path = os.path.join("downloades", uploaded_file.name)
+                with open(target_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                source = target_path
 
             set_step("audio", "active")
             chunks = process_input(source)
