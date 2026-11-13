@@ -12,6 +12,7 @@ groq
 langchain
 langchain-core
 langchain-community
+langchain-groq
 langchain-mistralai
 mistralai
 

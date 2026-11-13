@@ -1,52 +1,62 @@
-#Actionableitems , decision , questions 
-
-from langchain_mistralai import ChatMistralAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-import os 
+from core.llm import get_llm
 
 
-def get_llm():
-    return ChatMistralAI(model = "mistral-small-latest", mistral_api_key = os.getenv("MISTRAL_API_KEY"),temperature=0.2)
+def extract_all_insights(transcript: str) -> dict:
+    """Extract action items, key decisions, and open questions in a single LLM call."""
+    llm = get_llm(temperature=0.2)
+    prompt = ChatPromptTemplate.from_messages([
+        (
+            "system",
+            "You are an expert meeting analyst. Analyze the following meeting transcript "
+            "and extract three distinct sections using the EXACT headings below:\n\n"
+            "=== ACTION ITEMS ===\n"
+            "List all action items with:\n"
+            "- Task description\n"
+            "- Owner (who is responsible)\n"
+            "- Deadline (if mentioned, else 'Not specified')\n"
+            "If none found, write 'No action items found.'\n\n"
+            "=== KEY DECISIONS ===\n"
+            "List all agreed decisions and resolutions made. If none, write 'No key decisions found.'\n\n"
+            "=== OPEN QUESTIONS ===\n"
+            "List all unresolved topics or open questions requiring follow-up. If none, write 'No open questions found.'"
+        ),
+        ("human", "{text}"),
+    ])
+
+    chain = prompt | llm | StrOutputParser()
+    result = chain.invoke({"text": transcript[:30000]})
+
+    # Parse sections
+    act_part, dec_part, q_part = "", "", ""
+    if "=== ACTION ITEMS ===" in result:
+        parts = result.split("=== KEY DECISIONS ===")
+        act_part = parts[0].replace("=== ACTION ITEMS ===", "").strip()
+        if len(parts) > 1:
+            subparts = parts[1].split("=== OPEN QUESTIONS ===")
+            dec_part = subparts[0].strip()
+            if len(subparts) > 1:
+                q_part = subparts[1].strip()
+    else:
+        act_part = result
+        dec_part = "Included in summary."
+        q_part = "None noted."
+
+    return {
+        "action_items": act_part or "No action items found.",
+        "key_decisions": dec_part or "No key decisions found.",
+        "open_questions": q_part or "No open questions found.",
+    }
 
 
-
-def build_chain(system_prompt : str):
-    llm = get_llm()
-    return (
-        RunnablePassthrough() | RunnableLambda(lambda x : {"text" : x}) |ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human","{text}"),
-    ]) | llm |StrOutputParser()
-    )
-
-def extract_action_items(transcript:str)->str:
-    chain = build_chain(
-         "You are an expert meeting analyst. From the meeting transcript, "
-        "extract all action items. For each provide:\n"
-        "- Task description\n"
-        "- Owner (who is responsible)\n"
-        "- Deadline (if mentioned, else write 'Not specified')\n\n"
-        "Format as a numbered list. If none found say 'No action items found.'"
-    )
-
-    return chain.invoke(transcript)
+def extract_action_items(transcript: str) -> str:
+    return extract_all_insights(transcript)["action_items"]
 
 
 def extract_key_decisions(transcript: str) -> str:
-    chain = build_chain(
-        "You are an expert meeting analyst. From the meeting transcript, "
-        "extract all key decisions made. Format as a numbered list. "
-        "If none found say 'No key decisions found.'"
-    )
-    return chain.invoke(transcript)
+    return extract_all_insights(transcript)["key_decisions"]
 
 
 def extract_questions(transcript: str) -> str:
-    chain = build_chain(
-        "From the meeting transcript, extract all unresolved questions "
-        "or topics needing follow-up. Format as a numbered list. "
-        "If none found say 'No open questions found.'"
-    )
-    return chain.invoke(transcript)
+    return extract_all_insights(transcript)["open_questions"]

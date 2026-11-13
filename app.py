@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from utils.audio_processor import process_input
 from core.transcriber import transcribe_all
 from core.summarizer import summarize, generate_title
-from core.extractor import extract_action_items, extract_key_decisions, extract_questions
+from core.extractor import extract_all_insights
 from core.rag_engine import build_rag_chain, ask_question
 
 load_dotenv()
@@ -448,9 +448,10 @@ if run_btn:
             set_step("summary", "done")
 
             set_step("extract", "active")
-            action_items = extract_action_items(transcript)
-            decisions    = extract_key_decisions(transcript)
-            questions    = extract_questions(transcript)
+            insights = extract_all_insights(transcript)
+            action_items = insights["action_items"]
+            decisions    = insights["key_decisions"]
+            questions    = insights["open_questions"]
             set_step("extract", "done")
 
             set_step("rag", "active")
