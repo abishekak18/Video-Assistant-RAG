@@ -5,43 +5,26 @@ audioop-lts; python_version >= "3.13"
 static-ffmpeg
 ffmpeg-python
 
-# Speech-to-Text
+# Speech-to-Text (Cloud Groq Whisper - 0 MB server RAM)
 groq
-openai-whisper
-torch
-torchaudio
-torchvision
-
-# Translation
-deep-translator
 
 # LLM / LangChain
 langchain
 langchain-core
 langchain-community
 langchain-mistralai
-langchain_mistralai
 mistralai
 
-# RAG
+# RAG / Vector Store (Mistral Embeddings Cloud)
 chromadb
 langchain-chroma
-sentence-transformers
-langchain-huggingface
-huggingface-hub
 tiktoken
 
-# UI
+# Web UI
 streamlit
 streamlit-extras
-watchdog
-
-# PDF / Export
-reportlab
-fpdf2
 
 # Utilities
 python-dotenv
 numpy
-tqdm
 requests

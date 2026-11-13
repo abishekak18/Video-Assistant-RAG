@@ -8,11 +8,21 @@ import os
 DOWNLOAD_DIR = 'downloades'
 os.makedirs(DOWNLOAD_DIR,exist_ok = True)
 
-def download_youtube_audio(url :str) ->str:
-    output_path = os.path.join(DOWNLOAD_DIR, "%(title)s.%(ext)s")
+def download_youtube_audio(url: str) -> str:
+    output_path = os.path.join(DOWNLOAD_DIR, "%(id)s.%(ext)s")
     ydl_opts = {
         "format": "bestaudio/best",
         "outtmpl": output_path,
+        "restrictfilenames": True,
+        "nocheckcertificate": True,
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["mweb", "android", "web"]
+            }
+        },
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        },
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -20,11 +30,16 @@ def download_youtube_audio(url :str) ->str:
                 "preferredquality": "192",
             }
         ],
+        "postprocessor_args": {
+            "FFmpegExtractAudio": ["-ar", "16000", "-ac", "1"]
+        },
         "quiet": True,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
-        filename = ydl.prepare_filename(info).replace(".webm", ".wav").replace(".m4a", ".wav")
+        raw_file = ydl.prepare_filename(info)
+        base, _ = os.path.splitext(raw_file)
+        filename = base + ".wav"
     return filename
 
 
@@ -56,7 +71,8 @@ def chunk_audio(wav_path : str , chunk_minutes : int = 3) -> list:
     return chunks
 
 def process_input(source: str) -> list:
-    if source.startswith("http://") or source.startswith("https://"):
+    is_remote = source.startswith("http://") or source.startswith("https://")
+    if is_remote:
         print("Detected YouTube URL. Downloading audio...")
         wav_path = download_youtube_audio(source)
     else:
@@ -66,5 +82,15 @@ def process_input(source: str) -> list:
     print("Chunking audio...")
     chunks = chunk_audio(wav_path)
     print(f"Audio ready — {len(chunks)} chunk(s) created.")
+
+    # Remove the master WAV to save disk/RAM space once chunks are created
+    # If it was a downloaded YouTube file or converted local copy
+    if is_remote or wav_path.endswith("_converted.wav"):
+        if os.path.exists(wav_path):
+            try:
+                os.remove(wav_path)
+            except Exception:
+                pass
+
     return chunks
 

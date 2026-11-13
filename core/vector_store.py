@@ -13,12 +13,25 @@ def get_embeddings():
     if api_key:
         from langchain_mistralai import MistralAIEmbeddings
         return MistralAIEmbeddings(model="mistral-embed", mistral_api_key=api_key)
-    else:
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        return HuggingFaceEmbeddings(
-            model_name = EMBEDDING_MODEL,
-            model_kwargs = {"device" : 'cpu'}
-        )
+
+    if os.getenv("USE_LOCAL_EMBEDDINGS", "false").lower() in ("true", "1"):
+        try:
+            from langchain_community.embeddings import HuggingFaceEmbeddings
+            return HuggingFaceEmbeddings(
+                model_name=EMBEDDING_MODEL,
+                model_kwargs={"device": "cpu"}
+            )
+        except ImportError:
+            raise RuntimeError(
+                "langchain-huggingface / sentence-transformers is not installed. "
+                "Please configure MISTRAL_API_KEY in your environment variables."
+            )
+
+    raise RuntimeError(
+        "MISTRAL_API_KEY is not set in environment variables! "
+        "Render Free Tier instances (512MB RAM) cannot run local HuggingFace embeddings without running out of memory. "
+        "Please add MISTRAL_API_KEY to your Render Dashboard Environment Variables."
+    )
 
 
 def build_vector_store(transcript : str)->Chroma:
